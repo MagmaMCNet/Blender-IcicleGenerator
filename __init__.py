@@ -76,18 +76,6 @@ class IcicleProperties(PropertyGroup):
             ('Down', 'Down', 'Icicles point downwards (default)')
         ]
     )
-    preview_btn_tgl: BoolProperty(
-        name="PreviewTgl", default=False,
-        description="Toggle preview of max/min dimensions in 3D view"
-    )
-    apply_to: EnumProperty(
-        name="Apply To", default='ALL',
-        description="Choose whether to generate icicles on all selected edges or only the active edge",
-        items=[
-            ('ALL', 'All Selected Edges', 'Generate icicles on all selected edges'),
-            ('ACTIVE', 'Active Edge Only', 'Generate icicles only on the active edge')
-        ]
-    )
     gravity_curve: FloatProperty(
         name="Gravity Curve",
         default=0.3, min=0.0, max=1.0,
@@ -113,6 +101,14 @@ class IcicleProperties(PropertyGroup):
         name="Icicles per Edge",
         default=1, min=1, max=10,
         description="Number of icicles to generate per edge"
+    )
+    apply_to: EnumProperty(
+        name="Apply To", default='ALL',
+        description="Choose whether to generate icicles on all selected edges or only the active edge",
+        items=[
+            ('ALL', 'All Selected Edges', 'Generate icicles on all selected edges'),
+            ('ACTIVE', 'Active Edge Only', 'Generate icicles only on the active edge')
+        ]
     )
 
 # -----------------------------------------------------------------------------
@@ -261,91 +257,6 @@ class OT_GenerateIcicles(Operator):
         bmesh.update_edit_mesh(obj.data)
 
 # -----------------------------------------------------------------------------
-# Preview Operator
-# -----------------------------------------------------------------------------
-
-class OT_IciclePreview(Operator):
-    bl_idname = "view3d.icicle_preview"
-    bl_label = "Icicle Preview"
-    bl_options = {'REGISTER'}
-
-    _handle = None
-    _timer = None
-
-    @classmethod
-    def poll(cls, context):
-        ob = context.object
-        return ob and ob.mode == 'EDIT' and hasattr(context.scene, 'icicle_properties')
-
-    def modal(self, context, event):
-        if context.area:
-            context.area.tag_redraw()
-        props = context.scene.icicle_properties
-        if not props.preview_btn_tgl:
-            self.cancel(context)
-            return {'CANCELLED'}
-        if event.type == 'ESC':
-            props.preview_btn_tgl = False
-            self.cancel(context)
-            return {'CANCELLED'}
-        return {'PASS_THROUGH'}
-
-    def invoke(self, context, event):
-        if OT_IciclePreview._handle is None:
-            OT_IciclePreview._handle = bpy.types.SpaceView3D.draw_handler_add(
-                self.draw_callback, (context,), 'WINDOW', 'POST_VIEW')
-            OT_IciclePreview._timer = context.window_manager.event_timer_add(0.5, window=context.window)
-        context.window_manager.modal_handler_add(self)
-        return {'RUNNING_MODAL'}
-
-    def cancel(self, context):
-        if OT_IciclePreview._handle is not None:
-            bpy.types.SpaceView3D.draw_handler_remove(OT_IciclePreview._handle, 'WINDOW')
-            OT_IciclePreview._handle = None
-        if OT_IciclePreview._timer is not None:
-            context.window_manager.event_timer_remove(OT_IciclePreview._timer)
-            OT_IciclePreview._timer = None
-
-    def draw_callback(self, context):
-        props = context.scene.icicle_properties
-        obj = context.object
-        if not obj or obj.type != 'MESH' or obj.mode != 'EDIT':
-            return
-        bm = bmesh.from_edit_mesh(obj.data)
-        wm = obj.matrix_world
-        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
-        gpu.state.depth_test_set('LESS_EQUAL')
-        gpu.state.line_width_set(1.5)
-        s_edges = [e for e in bm.edges if e.select and not check_same_2d(e, props.min_rad)]
-        m_dir = -1 if props.direction == 'Up' else 1
-        for e in s_edges:
-            v_dir = (e.verts[0].co - e.verts[1].co).normalized()
-            mid_point = (e.verts[0].co + e.verts[1].co) * 0.5
-            mid_point_w = wm @ mid_point
-            # Draw curved preview path
-            segments = 12
-            path_pts = []
-            up_vec = wm.to_3x3() @ mathutils.Vector((0, 0, -1 if props.direction == 'Down' else 1))
-            wind_vec = wm.to_3x3() @ mathutils.Vector((math.cos(props.wind_angle), math.sin(props.wind_angle), 0))
-            for i in range(segments + 1):
-                t = i / segments
-                curve_offset = props.gravity_curve * (t ** 2) * props.max_depth * 0.5
-                wind_offset = props.wind_strength * t * props.max_depth * wind_vec
-                wave = props.waviness * props.max_rad * (random.random() - 0.5)
-                wave_vec = wm.to_3x3() @ mathutils.Vector((math.cos(8 * math.pi * t), math.sin(8 * math.pi * t), 0))
-                pos = mid_point_w + t * props.max_depth * up_vec
-                pos += curve_offset * mathutils.Vector((0, 0, -1))
-                pos += wind_offset
-                pos += wave * wave_vec
-                path_pts.append(pos)
-            shader.bind()
-            shader.uniform_float('color', (1, 0.7, 0.2, 1))
-            batch = batch_for_shader(shader, 'LINE_STRIP', {"pos": path_pts})
-            batch.draw(shader)
-        gpu.state.depth_test_set('NONE')
-        gpu.state.line_width_set(1.0)
-
-# -----------------------------------------------------------------------------
 # UI Panel
 # -----------------------------------------------------------------------------
 
@@ -386,10 +297,6 @@ class VIEW3D_PT_IciclePanel(Panel):
         layout.prop(props, 'wind_angle')
         layout.prop(props, 'waviness')
         layout.prop(props, 'apply_to')
-        label = "Preview On" if props.preview_btn_tgl else "Preview Off"
-        row = layout.row(align=True)
-        row.prop(props, 'preview_btn_tgl', text=label, toggle=True, icon='HIDE_OFF')
-        layout.operator('view3d.icicle_preview', text='Preview', icon='HIDE_OFF')
         layout.operator('mesh.generate_icicles', text='Generate', icon='PHYSICS')
 
 # -----------------------------------------------------------------------------
@@ -406,7 +313,6 @@ def menu_func(self, context):
 classes = [
     IcicleProperties,
     OT_GenerateIcicles,
-    OT_IciclePreview,
     VIEW3D_PT_IciclePanel,
 ]
 
