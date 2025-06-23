@@ -1,30 +1,42 @@
-# Blender-IcicleGenerator_2-80
-Icicle Generator updated for Blender 2.80
+# Blender Icicle Generator
 
-Some improvements over 2.7x version.
+## Overview
 
-* "Generate" button, set up parameters before generating the icicles
-* Option to work on whole mesh, or selected edges only
-* Option to select the cap type for the cones
-* Code refactoring to improve performance
+A modern Blender add-on for generating realistic icicles directly onto your mesh. Supports Blender **4.0 and above**. Forked and modernized from [MayeoinBread/Blender-IcicleGenerator](https://github.com/MayeoinBread/Blender-IcicleGenerator).
 
+---
+
+## Features
+
+- **Blender 4.0+ Compatible**
+- Add icicles to selected edges (or faces) in Edit Mode
+- Realistic icicle shapes:
+  - Gravity curve (icicles bend downward as they grow)
+  - Wind effect (icicles bend in a consistent direction)
+  - Waviness (natural kinks and bends)
+- Randomized placement and size for natural clustering
+- Adjustable number of icicles per edge
+- Live 3D preview of icicle paths
+- All geometry is added directly to your mesh (not as separate objects)
+- Full undo/redo support
+- Customizable parameters: radius, depth, curvature, wind, waviness, and more
+
+---
 
 ## Installation
-* Download the code as .ZIP file from GitHub (Green Code button -> Download ZIP)
-* In Blender, open Preferences (Edit -> Preferences)
-* Select the Add-ons tab on the left column
-* Click the Install button and select the downloaded .ZIP file
+
+1. Download this repository as a ZIP file.
+2. In Blender, go to **Edit > Preferences > Add-ons**.
+3. Click **Install...** and select the ZIP file.
+4. Enable the "Icicle Generator" add-on.
+
+---
 
 ## Usage
-* Script can only be used with Mesh objects in Edit mode
-* Select the edges you want to add icicles to
-* Icicles can be added in two ways:
-  * Select Generate Icicles from the search menu. This will generate icicles with default settings
-  * An Icicle Generator tab should be visible in the right side-bar (Shortcut: N, in Edit Mode only). Settings can be adjusted before clicking Generate to create the icicles.
-* In both cases, the icicles must be deleted if you need to regenerate them
 
-## Upcoming Features
-* Replace existing icicles when regenerating without need to manually delete old iterations
-* Helpers in 3D view to show min/max parameters
-* Update measurement limits, kink factors etc.
-* Account for object scaling
+1. Select a mesh object and enter **Edit Mode**.
+2. Select the edges where you want to add icicles.
+3. Open the **N-panel** (press `N`), go to the **Icicle Generator** tab.
+4. Adjust parameters as desired (radius, depth, gravity, wind, etc.).
+5. Click **Generate** to add icicles to your mesh.
+6. Use the **Preview** button to see a live preview of icicle paths before generating.
